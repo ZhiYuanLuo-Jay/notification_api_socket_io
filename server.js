@@ -1,6 +1,5 @@
 // Load the express module and store it in the variable express (Where do you think this comes from?)
 var express = require("express");
-const webpush = require("web-push");
 
 // invoke express and store the result in the variable app
 var app = express();

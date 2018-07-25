@@ -92,7 +92,7 @@
         socket.emit('subscribe', {}); 
         
         // receive notification
-        for(var i=0; i<10; i++){
+        for(let i=0; i<10; i++){
             socket.on('receive'+i, function(data) {
                 console.log("Receive Socket data: ", data)
                 console.log("TypeOf Socket data: ", typeof(data))
