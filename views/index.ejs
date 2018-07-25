@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Grove Scheduler</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" type="text/css" href="/stylesheets/style.css">
+    <script src="https://code.jquery.com/jquery-3.1.0.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script type="text/javascript" src="/socket.io/socket.io.js"></script>
+ 
+<script>        
+    var dayOfWeek = {
+        1: "Monday",
+        2: "Tuesday",
+        3: "Wednesday",
+        4: "Thursday",
+        5: "Friday",
+        6: "Saturday",
+        7: "Sunday", 
+        0: "Sunday"
+    }
+
+    // Function to convert cron to regualr time description
+    function cronConvert(str){
+        var dayArr = str.split(" ");
+        var cronStr = "";
+        // console.log(str)
+        for (var i=dayArr.length-1; i>=0; i--) { 
+            if(i==4 && dayArr[i].length < 3 && dayArr[i] !== '*'){
+                // console.log("Day of Week: ", dayOfWeek[(dayArr[i].toString())])
+                cronStr += dayOfWeek[(dayArr[i].toString())] + ", "
+            } else if (i==4 && dayArr[i].length == 3){
+                cronStr += "from " + dayOfWeek[(dayArr[i][0].toString())] + " to " + dayOfWeek[(dayArr[i][2].toString())] + ", "
+            }  else if (i==3 && dayArr[i].length < 3 && dayArr[i] !== '*'){
+                // console.log("Month of Year: ",dayArr[i])
+                cronStr += dayArr[i] + "/"
+            } else if (i==2 && dayArr[i].length < 3 && dayArr[i] !== '*'){
+                // console.log("Day of Month: ", dayArr[i+1],dayArr[i])
+                if(dayArr[i+1] == "*"){  dayArr[i] = "Day of " + dayArr[i]}
+                cronStr += dayArr[i] + " at "
+            } else if (i==1 && dayArr[i].length < 3 && dayArr[i] !== '*'){
+                // console.log("Hour: ",dayArr[i])
+                cronStr += dayArr[i] + ":"
+            } else if (i==1 && dayArr[i].length == 3){
+                // console.log("Detect 3 length")
+                cronStr += "from " + dayArr[i][0] + " to " + dayArr[i][2] + ": "
+            } else if (i==1 && dayArr[i].length >= 3){
+                // console.log("Detect 4 length")
+                cronStr += "from " + dayArr[i][0] + " to " + dayArr[i][2] + dayArr[i][3] + ": "
+            } else if (i==0 && dayArr[i].length < 3 && dayArr[i] !== '*'){
+                // console.log("Minu: ",dayArr[i])
+                if (dayArr[i] == '0'){
+                    cronStr += dayArr[i] 
+                }
+                cronStr += dayArr[i] 
+            }
+        }
+        return cronStr;
+    }
+
+    $(document).ready(function() {
+        var socket = io(); //1      
+        var arr = [], task = [];
+        
+        var url = $('#url').val();
+        $.get(url, function(res){
+            console.log("Grove Api response: ", res['data']);
+            for(var i=0; i<res['data'].length; i++){
+                $('.api').append('<h3>Task ' + i + ' - ' + res['data'][i]['attributes']['name'] + 
+                " => every " +  cronConvert(res['data'][i]['attributes']['cron']) +".</h3> \n");           
+                let cronData = res['data'][i]['attributes']['cron'];
+
+                // Handling for "0 14 * *", which is missing one *.
+                if (cronData.split(" ").length == 4){
+                    let strFix = cronData.split(" ");
+                    strFix.push("*");
+                    cronData = strFix.join(" ")
+                }
+                let taskData = res['data'][i]['attributes']['name'];
+                arr.push(cronData);
+                task.push(taskData)
+            }
+            $("#api").val(arr);
+            $("#task").val(task);
+        }, 'json');  
+        
+        // subscribe notification
+        socket.emit('subscribe', {}); 
+        
+        // receive notification
+        for(var i=0; i<10; i++){
+            socket.on('receive'+i, function(data) {
+                console.log("Receive Socket data: ", data)
+                console.log("TypeOf Socket data: ", typeof(data))
+                var notify = new Notification('Grove Scheduler Notification', {
+                    body: data,
+                })
+            });        
+        }
+
+    });
+</script>
+
+</head>
+
+<body>
+    <div class="wrapper">            
+        <h1 style="color: lightcoral;">Welcome to Grove Scheduler App.</h1>
+        <div class="input-group">
+            <form action='/input' method='post'>
+                <input type='hidden' id="api" name='API'>
+                <input type='hidden' id="task" name='TASK'>
+                <input type="text" id="url" name="url" value="https://scheduler-challenge.herokuapp.com/schedule">        
+                <input type="submit" id="input" value="Get API Data">
+            </form>
+        </div>
+        <br>
+        <div class="api"></div>
+        <br>
+        <hr>
+        <h2>Events, happening in the next 24 hours: </h2>
+        <div id="taskIn">
+            <% if(taskIn) { %>
+                <h3 style="color: lightgreen"><%= taskIn %></h3>
+            <% } %>
+        </div>
+        <br>
+        <hr>
+        <h2>Event, previous 3 hours from the current time: </h2>
+        <div>
+            <% if(taskBack) { %>
+                <h3 style="color: lightcoral"><%= taskBack %></h3>
+            <% } %>
+        </div>
+    </div>
+</body>
+
+</html>

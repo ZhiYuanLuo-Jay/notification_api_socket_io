@@ -1,0 +1,16 @@
+* {
+    /* outline: 1px dotted black; */
+    margin: 0px auto;
+    padding: 0px;
+}
+
+.wrapper {
+    width: 900px;
+    min-height: 600px;
+    padding: 5px;
+    background-color: beige;
+}
+
+#url {
+    width: 500px;
+}
